@@ -148,11 +148,22 @@ async def websocket_endpoint_client(websocket: WebSocket):
                 await manager.broadcast_status(data)
                 
                 # 2. Send to ESP32s
-                # In a real app, find specific device ID. Here we broadcast to connected devices.
-                # Format for ESP32: "turn_on:light"
-                device_command = f"{action}:{device_type}"
-                for device_ws in manager.active_devices.values():
-                    await device_ws.send_text(device_command)
+                if device_type == "all":
+                    # Expand 'all' into individual commands for ESP32s
+                    all_targets = ["light", "fan", "kitchen light", "refrigerator", "tv", "hometheater"]
+                    for target in all_targets:
+                        # Essential appliance protection
+                        if target == "refrigerator" and action == "turn_off":
+                            continue
+                        
+                        device_command = f"{action}:{target}"
+                        for device_ws in manager.active_devices.values():
+                            await device_ws.send_text(device_command)
+                else:
+                    # Single device command
+                    device_command = f"{action}:{device_type}"
+                    for device_ws in manager.active_devices.values():
+                        await device_ws.send_text(device_command)
     except WebSocketDisconnect:
         manager.disconnect_client(websocket)
 

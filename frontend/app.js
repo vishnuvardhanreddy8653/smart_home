@@ -10,8 +10,8 @@ const RECONNECT_DELAY = 3000;
 
 function connect() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // If hostname is empty (e.g. file://), default to localhost
-    const host = window.location.hostname || 'localhost';
+    // If hostname is empty (e.g. file://), default to 127.0.0.1 (safer than localhost on Windows)
+    const host = window.location.hostname || '127.0.0.1';
     const wsUrl = `${protocol}//${host}:8000/ws/client`;
     ws = new WebSocket(wsUrl);
 
@@ -23,8 +23,8 @@ function connect() {
 
     ws.onclose = () => {
         console.log("WebSocket Disconnected. Reconnecting...");
-        connectionStatus.textContent = 'Reconnecting...';
-        connectionStatus.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 flex items-center';
+        connectionStatus.textContent = 'Reconnecting... (Check Backend)';
+        connectionStatus.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/30 flex items-center';
 
         // Try to reconnect
         setTimeout(connect, RECONNECT_DELAY);
@@ -54,7 +54,7 @@ async function showQRCode() {
     if (!qrCodeObj) {
         try {
             // Fetch local IP from backend
-            const host = window.location.hostname || 'localhost';
+            const host = window.location.hostname || '127.0.0.1';
             const apiUrl = `http://${host}:8000/connection-info`;
             const response = await fetch(apiUrl);
             const data = await response.json();
@@ -70,7 +70,7 @@ async function showQRCode() {
             });
         } catch (e) {
             console.error("Could not fetch connection info", e);
-            document.getElementById('localUrl').textContent = "Error fetching IP. Ensure server is running.";
+            document.getElementById('localUrl').textContent = "Error fetching IP. Is Backend Running?";
         }
     }
 }
@@ -78,8 +78,6 @@ async function showQRCode() {
 function hideQRCode() {
     document.getElementById('qrModal').classList.add('hidden');
 }
-
-
 
 
 function updateUI(action, deviceType) {
@@ -142,27 +140,15 @@ if (!SpeechRecognition) {
     recognition.interimResults = true; // FASTER REACTION
 
     // --- OPTIMIZED SPEECH RECOGNITION ---
-    // Aggressive Auto-Start & Always-On Logic
-    const startAudioContext = () => {
-        if (!isListenLoopActive) {
-            console.log("🚀 ACTIVATING MICROPHONE...");
-            startListening();
-        }
-    };
-
-    // 1. Try immediately (Works if user has interacted with domain before)
-    setTimeout(startAudioContext, 500);
-
-    // 2. Attach to ALL common interaction events to ensure we catch the first click/touch
-    ['click', 'touchstart', 'keydown', 'scroll'].forEach(event => {
-        document.addEventListener(event, startAudioContext, { once: true });
-    });
+    // LOGIC: CLICK ONCE TO ACTIVATE "ALWAYS ON"
 
     micBtn.addEventListener('click', () => {
-        if (isListenLoopActive) {
-            stopListening();
-        } else {
+        if (!isListenLoopActive) {
+            // First activation
             startListening();
+        } else {
+            // Manual Stop/Toggle
+            stopListening();
         }
     });
 
@@ -187,7 +173,7 @@ if (!SpeechRecognition) {
         recognition.stop();
         micBtn.classList.remove('mic-active');
         if (commandTimeout) clearTimeout(commandTimeout);
-        updateStatus("Tap microphone to start...", "none");
+        updateStatus("Tap mic to Activate", "none");
     }
 
     function updateStatus(text, color) {
@@ -196,22 +182,23 @@ if (!SpeechRecognition) {
         // Reset classes
         micBtn.className = "w-24 h-24 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center transition-all duration-300 group";
 
-        if (color === 'red') {
-            // Listening Mode
+        if (color === 'red') { // Listening Mode
             micBtn.classList.add('mic-active');
             micBtn.style.borderColor = "#ea4335";
         }
-        if (color === 'green') {
-            // Wake Word Detected
+        if (color === 'green') { // Wake Word Detected
             micBtn.classList.add('mic-listening');
             micBtn.classList.add('scale-110');
             micBtn.style.borderColor = "#34a853";
         }
-        if (color === 'blue') {
-            // Active Command Mode
+        if (color === 'blue') { // Active Command Mode
             micBtn.classList.add('mic-processing');
             micBtn.classList.add('animate-bounce');
             micBtn.style.borderColor = "#4285f4";
+        }
+
+        if (color === 'none') {
+            micBtn.style.borderColor = "#e5e7eb"; // Gray
         }
     }
 
@@ -219,6 +206,7 @@ if (!SpeechRecognition) {
         isActiveCommandMode = true;
         speakResponse("Yes?", 0.8);
         updateStatus("Jerry is listening...", "blue");
+
         if (commandTimeout) clearTimeout(commandTimeout);
         commandTimeout = setTimeout(() => {
             if (isActiveCommandMode) {
@@ -261,13 +249,12 @@ if (!SpeechRecognition) {
                     if (!command) {
                         activateCommandMode();
                     } else {
-                        // console.log(`🚀 EXEC: ${command}`); // Removed excessive logging
+                        // console.log(`🚀 EXEC: ${command}`); 
                         processCommand(command);
                         isActiveCommandMode = false;
                         updateStatus("Listening...", "red");
                     }
                 } else if (isActiveCommandMode) {
-                    // console.log(`🚀 ACTIVE EXEC: ${transcript}`); // Removed excessive logging
                     processCommand(transcript);
                     isActiveCommandMode = false;
                     updateStatus("Listening...", "red");
@@ -278,18 +265,37 @@ if (!SpeechRecognition) {
 
     recognition.onerror = (event) => {
         if (event.error === 'no-speech') return;
-        // console.log("Speech Error:", event.error); // Silent error handling
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            // If denied, stop the loop to prevent popup spam
+            stopListening();
+            updateStatus("Mic denied. Tap to Allow.", "none");
+        }
     };
 
     recognition.onend = () => {
-        // ROBUST AUTO-RESTART
+        // ROBUST AUTO-RESTART with RECURSIVE WAIT
         if (isListenLoopActive) {
-            // calculated backoff or immediate
-            setTimeout(() => {
-                try { recognition.start(); } catch (e) { }
-            }, 100);
+            const attemptRestart = () => {
+                if (!isListenLoopActive) return;
+
+                if (window.isAgentSpeaking) {
+                    // "Polite Waiting": Agent is talking, so we wait.
+                    // Check again in 100ms
+                    setTimeout(attemptRestart, 100);
+                } else {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        // If blocked/error, wait longer (1s) to avoid spam
+                        setTimeout(attemptRestart, 1000);
+                    }
+                }
+            };
+
+            // Kickoff
+            setTimeout(attemptRestart, 100);
         } else {
-            updateStatus("Tap mic to start", "none");
+            updateStatus("Tap mic to Activate", "none");
         }
     };
 }
@@ -298,7 +304,8 @@ function processCommand(text) {
     statusText.textContent = "Processing: " + text;
 
     // --- CLIENT-SIDE FAST PATH ---
-    const fastMatch = text.match(/(turn|switch)\s+(on|off)\s+(?:the\s+)?(?:(\w+)\s+)?(light|fan|relay|tv|fridge|refrigerator|home theater|hometheater|all|everything|number \d+|\d+)/);
+    // Regex updated to support "every thing" (two words)
+    const fastMatch = text.match(/(turn|switch)\s+(on|off)\s+(?:the\s+)?(?:(\w+)\s+)?(light|fan|relay|tv|fridge|refrigerator|home theater|hometheater|all|everything|every thing|number \d+|\d+)/);
 
     if (fastMatch) {
         const actionWord = fastMatch[2]; // on/off
@@ -307,13 +314,17 @@ function processCommand(text) {
         const action = actionWord === "on" ? "turn_on" : "turn_off";
 
         // Handle ALL
-        if (deviceRaw === 'all' || deviceRaw === 'everything') {
+        if (deviceRaw === 'all' || deviceRaw === 'everything' || deviceRaw === 'every thing') {
             console.log("⚡ Fast Path: ALL DEVICES", action);
-            // Update UI visually immediately for ALL devices
             updateUI(action, 'all');
 
             speakResponse(`Okay, turning ${actionWord} everything.`, action === 'turn_off' ? 0.5 : 1.0);
-            sendVoiceCommand(text, true);
+
+            // OPTIMIZATION: Send directly via WebSocket for instant hardware response
+            // This bypasses the slower HTTP /command/ endpoint and Python AI processing
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(`ACTION:${action}:all`);
+            }
             return;
         }
 
@@ -325,7 +336,7 @@ function processCommand(text) {
         }
 
         // Normalize
-        if (deviceRaw === "refrigerator") deviceRaw = "fridge"; // match updateUI check
+        if (deviceRaw === "refrigerator") deviceRaw = "fridge";
         if (deviceRaw === "home theater") deviceRaw = "hometheater";
 
         console.log("⚡ Client-Side Fast Path:", action, deviceRaw);
@@ -337,10 +348,13 @@ function processCommand(text) {
         const volume = action === 'turn_off' ? 0.5 : 1.0;
         speakResponse(`Okay, turning ${actionWord} the ${deviceRaw}`, volume);
 
-        // 3. Send to Backend
-        sendVoiceCommand(text, true);
+        // 3. Send directly via WebSocket
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(`ACTION:${action}:${deviceRaw}`);
+        }
     } else {
         // --- SLOW PATH (Server AI) ---
+        // Only use AI if we couldn't understand it locally
         sendVoiceCommand(text, false);
     }
 }
@@ -361,11 +375,10 @@ async function sendVoiceCommand(text, handledLocally = false) {
         return;
     }
 
-    // We send via HTTP for parsing, or we could use WS. Existing backend uses HTTP POST /command
     try {
-        const host = window.location.hostname || 'localhost';
+        // Fix Hostname for Fetch too
+        const host = window.location.hostname || '127.0.0.1';
         const apiUrl = `http://${host}:8000/command/`;
-        // Don't wait for fetch if handled locally to improve perceived speed
         if (handledLocally) {
             fetch(apiUrl, {
                 method: 'POST',
@@ -419,7 +432,6 @@ function speakResponse(text, volume = 1.0) {
     utterance.rate = 1.1; // Slightly faster for optimized feel
     utterance.pitch = 1.0;
 
-    // Strictly prefer Female Voice
     const femaleVoice = voices.find(v =>
         v.name.includes('Zira') ||
         v.name.includes('Google US English') ||
@@ -430,7 +442,6 @@ function speakResponse(text, volume = 1.0) {
     if (femaleVoice) {
         utterance.voice = femaleVoice;
     } else {
-        // Fallback to any English if no female found, but try to find one with 'en-US'
         const enVoice = voices.find(v => v.lang === 'en-US');
         if (enVoice) utterance.voice = enVoice;
     }
@@ -438,8 +449,8 @@ function speakResponse(text, volume = 1.0) {
     // --- SMART MUTE (Prevents Self-Triggering) ---
     utterance.onstart = () => { window.isAgentSpeaking = true; };
     utterance.onend = () => {
-        // Small buffer to let echo die down
-        setTimeout(() => { window.isAgentSpeaking = false; }, 300);
+        // FAST RECOVERY: Clear flag immediately to allow next command
+        window.isAgentSpeaking = false;
     };
     utterance.onerror = () => { window.isAgentSpeaking = false; };
 
