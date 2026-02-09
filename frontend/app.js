@@ -10,36 +10,30 @@ const RECONNECT_DELAY = 3000;
 
 function connect() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // If hostname is empty (e.g. file://), default to 127.0.0.1 (safer than localhost on Windows)
-    const host = window.location.hostname || '127.0.0.1';
+    // Use window.location.hostname to support both Docker Compose and production
+    const host = window.location.hostname || 'localhost';
     const wsUrl = `${protocol}//${host}:8000/ws/client`;
+
     ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
         console.log("WebSocket Connected");
         connectionStatus.textContent = 'Connected';
-        connectionStatus.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-400 border border-green-500/30 flex items-center';
     };
 
     ws.onclose = () => {
         console.log("WebSocket Disconnected. Reconnecting...");
-        connectionStatus.textContent = 'Reconnecting... (Check Backend)';
-        connectionStatus.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/30 flex items-center';
-
-        // Try to reconnect
         setTimeout(connect, RECONNECT_DELAY);
     };
 
     ws.onmessage = (event) => {
-        console.log("Message from server:", event.data);
         const parts = event.data.split(':');
         if (parts[0] === 'ACTION') {
-            const action = parts[1];
-            const deviceType = parts[2];
-            updateUI(action, deviceType);
+            updateUI(parts[1], parts[2]);
         }
     };
 }
+
 
 // Initial connection
 connect();
@@ -54,7 +48,7 @@ async function showQRCode() {
     if (!qrCodeObj) {
         try {
             // Fetch local IP from backend
-            const host = window.location.hostname || '127.0.0.1';
+            const host = window.location.hostname || 'localhost';
             const apiUrl = `http://${host}:8000/connection-info`;
             const response = await fetch(apiUrl);
             const data = await response.json();
@@ -376,8 +370,8 @@ async function sendVoiceCommand(text, handledLocally = false) {
     }
 
     try {
-        // Fix Hostname for Fetch too
-        const host = window.location.hostname || '127.0.0.1';
+        // Use dynamic hostname for API calls
+        const host = window.location.hostname || 'localhost';
         const apiUrl = `http://${host}:8000/command/`;
         if (handledLocally) {
             fetch(apiUrl, {

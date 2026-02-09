@@ -3,7 +3,6 @@ from threading import Thread
 from typing import List, Dict
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, Body
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
 
@@ -13,15 +12,6 @@ from connection_manager import manager
 from ai_service import ai_service
 
 app = FastAPI()
-
-import os
-
-# Mount frontend static files
-# Get absolute path to frontend directory (sibling to backend)
-current_dir = os.path.dirname(os.path.abspath(__file__))
-frontend_dir = os.path.join(current_dir, "..", "frontend")
-
-app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
 
 # CORS for development
 app.add_middleware(
