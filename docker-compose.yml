@@ -37,9 +37,15 @@ services:
     container_name: smart_home_frontend
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
       backend:
         condition: service_healthy
+    volumes:
+      # SSL certificates - create certs folder with your certificates
+      - ./certs:/etc/nginx/ssl:ro
+      # Optional: Let's Encrypt certbot challenges
+      - ./certbot:/var/www/certbot:ro
     networks:
       - smart_home_network
     restart: always
@@ -48,6 +54,10 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+networks:
+  smart_home_network:
+    driver: bridge
 
 networks:
   smart_home_network:

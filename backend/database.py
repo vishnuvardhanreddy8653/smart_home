@@ -6,7 +6,9 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Database is now in sibling directory 'database'
 sqlite_file_name = os.path.join(BASE_DIR, "..", "database", "database.db")
-sqlite_url = f"sqlite:///{sqlite_file_name}"
+
+sqlite_url = "sqlite:////app/data/database.db"
+
 
 engine = create_engine(sqlite_url, echo=True)
 

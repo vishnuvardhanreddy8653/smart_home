@@ -11,6 +11,7 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Copy frontend static files
 COPY index.html app.js /usr/share/nginx/html/
 
-EXPOSE 80
+# Expose both HTTP and HTTPS ports
+EXPOSE 80 443
 
 CMD ["nginx", "-g", "daemon off;"]
