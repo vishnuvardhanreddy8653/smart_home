@@ -2,7 +2,7 @@ from datetime import datetime
 from threading import Thread
 from typing import List, Dict
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, Body, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
 
@@ -176,11 +176,8 @@ async def websocket_endpoint_device(websocket: WebSocket, device_id: str, sessio
         manager.disconnect_device(device_id)
 
 @app.get("/connection-info")
-def get_connection_info(request: Request):
-    """Returns the local IP address and appropriate URL to construct the QR code.
-    
-    Detects protocol from request to return HTTPS URL when accessed via HTTPS.
-    """
+def get_connection_info():
+    """Returns the local IP address to construct the QR code URL."""
     try:
         import socket
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -191,28 +188,10 @@ def get_connection_info(request: Request):
     except Exception:
         local_ip = "127.0.0.1"
     
-    # Detect if accessed via HTTPS (Nginx reverse proxy sets X-Forwarded-Proto)
-    protocol = request.headers.get("X-Forwarded-Proto", "http")
-    
-    # For QR code, use the host that was used to access this endpoint if available
-    # Otherwise construct from local IP
-    if "host" in request.headers:
-        # Extract just the hostname without port
-        host = request.headers.get("host").split(":")[0]
-    else:
-        host = local_ip
-    
-    # Construct URL - port 80 for HTTP, 443 for HTTPS (implicit in URLs)
-    if protocol == "https":
-        url = f"https://{host}/"
-    else:
-        url = f"http://{host}:8000/static/index.html"
-    
     return {
         "ip": local_ip,
         "port": 8000,
-        "url": url,
-        "protocol": protocol
+        "url": f"http://{local_ip}:8000/static/index.html"
     }
 
 @app.get("/")
@@ -221,32 +200,5 @@ def read_root():
 
 if __name__ == "__main__":
     import uvicorn
-    import os
-    
-    # Get SSL configuration from environment variables (optional)
-    ssl_keyfile = os.getenv("SSL_KEYFILE", None)
-    ssl_certfile = os.getenv("SSL_CERTFILE", None)
-    
-    # SSL/TLS Configuration
-    # For development: Leave empty (HTTP only)
-    # For production with Nginx reverse proxy: Keep empty (SSL termination at Nginx)
-    # For production with direct SSL: Set ssl_keyfile and ssl_certfile environment variables
-    #
-    # Example commands to generate self-signed certificates:
-    # openssl req -x509 -newkey rsa:4096 -nodes -out cert.pem -keyout key.pem -days 365
-    
-    uvicorn_kwargs = {
-        "host": "0.0.0.0",
-        "port": 8000,
-        "reload": False,  # Set to True only in development
-    }
-    
-    # Enable SSL if certificates are provided
-    if ssl_certfile and ssl_keyfile:
-        uvicorn_kwargs["ssl_certfile"] = ssl_certfile
-        uvicorn_kwargs["ssl_keyfile"] = ssl_keyfile
-        print("🔒 Running with SSL/TLS enabled")
-    else:
-        print("⚠️  Running without SSL/TLS. Use Nginx reverse proxy for HTTPS in production.")
-    
-    uvicorn.run(app, **uvicorn_kwargs)
+    # Bind to 0.0.0.0 to allow access from local network (mobile devices)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

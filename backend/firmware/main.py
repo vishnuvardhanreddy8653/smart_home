@@ -11,26 +11,8 @@ SERVER_IP = "10.209.6.232"
 SERVER_PORT = 8000
 DEVICE_ID = "esp32_home"
 
-# SSL/TLS Configuration for WSS (WebSocket Secure)
-# Note: EST32 with MicroPython supports SSL but requires proper certificates
-# For development with self-signed certificates, set USE_SSL = False
-# For production with valid certificates, set USE_SSL = True
-
-USE_SSL = False  # Set to True if you have proper SSL certificates installed
-
 # Construct URI
-if USE_SSL:
-    # WSS (WebSocket Secure) - Requires SSL/TLS support
-    # You may need to configure CA certificates on ESP32
-    # See: https://docs.micropython.org/en/latest/library/ssl.html
-    URI = "wss://{}:{}/ws/device/{}".format(SERVER_IP, SERVER_PORT, DEVICE_ID)
-    print("🔒 Using WSS (Secure WebSocket)")
-else:
-    # WS (Plain WebSocket) - For development/testing
-    URI = "ws://{}:{}/ws/device/{}".format(SERVER_IP, SERVER_PORT, DEVICE_ID)
-    print("⚠️  Using WS (Plain WebSocket) - Not encrypted!")
-
-print(f"Connecting to: {URI}")
+URI = "ws://{}:{}/ws/device/{}".format(SERVER_IP, SERVER_PORT, DEVICE_ID)
 
 # --- HARDWARE SETUP ---
 # GPIO 2: Built-in LED (Status)

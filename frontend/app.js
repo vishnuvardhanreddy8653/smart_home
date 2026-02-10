@@ -9,17 +9,11 @@ const RECONNECT_DELAY = 3000;
 
 
 function connect() {
-    // Determine WebSocket protocol based on page protocol
-    // If page is HTTPS, use WSS (WebSocket Secure), otherwise use WS
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Use window.location.hostname to support both Docker Compose and production
     const host = window.location.hostname || 'localhost';
-    
-    // Use appropriate port based on protocol
-    // For HTTPS/WSS: use 443 (or 8443), for HTTP/WS: use 8000
-    const port = window.location.protocol === 'https:' ? (window.location.port || '443') : '8000';
-    const wsUrl = `${wsProtocol}//${host}:${port}/ws/client`;
+    const wsUrl = `${protocol}//${host}:8000/ws/client`;
 
-    console.log(`Connecting to WebSocket: ${wsUrl}`);
     ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
@@ -54,9 +48,8 @@ async function showQRCode() {
     if (!qrCodeObj) {
         try {
             // Fetch local IP from backend
-            const protocol = window.location.protocol; // https: or http:
             const host = window.location.hostname || 'localhost';
-            const apiUrl = `${protocol}//${host}:8000/connection-info`;
+            const apiUrl = `http://${host}:8000/connection-info`;
             const response = await fetch(apiUrl);
             const data = await response.json();
             const url = data.url || window.location.href; // Fallback
@@ -375,11 +368,11 @@ async function sendVoiceCommand(text, handledLocally = false) {
         }
         return;
     }
+
     try {
-        // Use dynamic hostname and protocol for API calls
-        const protocol = window.location.protocol; // https: or http:
+        // Use dynamic hostname for API calls
         const host = window.location.hostname || 'localhost';
-        const apiUrl = `${protocol}//${host}:8000/command/`;
+        const apiUrl = `http://${host}:8000/command/`;
         if (handledLocally) {
             fetch(apiUrl, {
                 method: 'POST',
