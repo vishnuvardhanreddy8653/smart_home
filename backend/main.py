@@ -13,6 +13,10 @@ from ai_service import ai_service
 
 app = FastAPI()
 
+# Global variable to store the latest command for ESP32 polling
+# Format: "action:device" or "idle"
+pending_esp32_command = "idle"
+
 # CORS for development
 app.add_middleware(
     CORSMiddleware,
@@ -86,11 +90,19 @@ async def process_voice_command(command: dict = Body(...)):
         else:
             await manager.broadcast_status(f"ACTION:{action}:{device_type}")
         
+        # Update the ESP32 polling queue
+        global pending_esp32_command
+        
+        # Map "kitchen light" to "kitchen" for ESP32
+        esp32_device = "kitchen" if device_type == "kitchen light" else device_type
+        device_command = f"{action}:{esp32_device}"
+        pending_esp32_command = device_command
+        
         # In a real scenario, we would parse 'location' and find the specific device ID
         # For this demo, we broadcast to the specific device type if connected
         # Or just broadcast to all ESP32s
         for device_id, ws in manager.active_devices.items():
-            await ws.send_text(f"{action}:{device_type}")
+            await ws.send_text(device_command)
 
     return result
 
@@ -138,8 +150,15 @@ async def websocket_endpoint_client(websocket: WebSocket):
                 await manager.broadcast_status(data)
                 
                 # 2. Send to ESP32s
+                global pending_esp32_command
+                
                 if device_type == "all":
-                    # Expand 'all' into individual commands for ESP32s
+                    # For "all", we'll just send the first device command
+                    # ESP32 will need to handle "all" or we send individual commands
+                    # For simplicity, let's send "turn_on:all" or "turn_off:all"
+                    pending_esp32_command = f"{action}:all"
+                    
+                    # Expand 'all' into individual commands for WebSocket-connected ESP32s
                     all_targets = ["light", "fan", "kitchen light", "refrigerator", "tv", "hometheater"]
                     for target in all_targets:
                         # Essential appliance protection
@@ -151,7 +170,14 @@ async def websocket_endpoint_client(websocket: WebSocket):
                             await device_ws.send_text(device_command)
                 else:
                     # Single device command
-                    device_command = f"{action}:{device_type}"
+                    # Map "kitchen light" to "kitchen" for ESP32
+                    esp32_device = "kitchen" if device_type == "kitchen light" else device_type
+                    device_command = f"{action}:{esp32_device}"
+                    
+                    # Update the polling queue for HTTP-polling ESP32s
+                    pending_esp32_command = device_command
+                    
+                    # Send via WebSocket to connected ESP32s
                     for device_ws in manager.active_devices.values():
                         await device_ws.send_text(device_command)
     except WebSocketDisconnect:
@@ -193,6 +219,27 @@ def get_connection_info():
         "port": 8000,
         "url": f"http://{local_ip}:8000/static/index.html"
     }
+
+@app.get("/device")
+def get_device_command():
+    """
+    ESP32 polling endpoint.
+    Returns the latest pending command in format: action:device
+    Returns "idle" when no command is pending.
+    """
+    global pending_esp32_command
+    
+    # Get the current command
+    command = pending_esp32_command
+    
+    # Clear it after reading (one-time delivery)
+    pending_esp32_command = "idle"
+    
+    print(f"ESP32 polled /device, returning: {command}")
+    
+    # Return plain text response
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(content=command)
 
 @app.get("/")
 def read_root():
