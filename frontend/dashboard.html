@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Home Dashboard</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Product+Sans:wght@400;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'Roboto', sans-serif; 
+      background: linear-gradient(135deg, #1f2937, #111827); 
+      color: #fff; 
+      min-height: 100vh; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: flex-start;
+      padding: 20px; 
+    }
+    h1,h2,h3 { font-family: 'Product Sans', sans-serif; }
+    .header { 
+      width: 100%; 
+      max-width: 6xl; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 20px; 
+    }
+    .connection-status { 
+      padding: 5px 12px; 
+      border-radius: 999px; 
+      background-color: #05966950; 
+      color: #10b981; 
+      font-size: 0.75rem; 
+      font-weight: 500; 
+    }
+    .mic-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+    .mic-active { 
+      animation: mic-pulse 1.2s infinite; 
+      box-shadow: 0 0 20px rgba(250,204,21,0.6); 
+    }
+    @keyframes mic-pulse { 
+      0% { transform: scale(1); opacity: 0.7; } 
+      50% { transform: scale(1.15); opacity: 1; } 
+      100% { transform: scale(1); opacity: 0.7; } 
+    }
+    .smart-card { 
+      background: #1e293b; 
+      border-radius: 24px; 
+      width: 300px; 
+      height: 180px; 
+      padding: 20px; 
+      display: flex; 
+      flex-direction: column; 
+      justify-content: space-between; 
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4); 
+      transition: transform 0.3s, box-shadow 0.3s, background 0.3s; 
+      cursor: pointer; 
+    }
+    .smart-card:hover { 
+      transform: translateY(-8px); 
+      box-shadow: 0 12px 30px rgba(0,0,0,0.6); 
+      background: #273449; 
+    }
+    .device-icon { 
+      width: 50px; 
+      height: 50px; 
+      border-radius: 50%; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      background: #facc15; 
+      transition: transform 0.3s, box-shadow 0.3s; 
+    }
+    .device-icon.active { 
+      animation: pulse 1.5s infinite; 
+      box-shadow: 0 0 30px #facc15, 0 0 60px #facc15; 
+    }
+    @keyframes pulse { 
+      0% { transform: scale(1); opacity: 0.8; } 
+      50% { transform: scale(1.2); opacity: 1; } 
+      100% { transform: scale(1); opacity: 0.8; } 
+    }
+    .toggle-wrapper { 
+      position: relative; 
+      width: 48px; 
+      height: 24px; 
+    }
+    .toggle-checkbox { opacity: 0; width: 0; height: 0; }
+    .toggle-label { 
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+      background-color: #374151; 
+      border-radius: 999px; 
+      cursor: pointer; 
+      transition: background 0.3s; 
+    }
+    .toggle-label::after { 
+      content: ""; 
+      position: absolute; left: 2px; top: 2px; 
+      width: 20px; height: 20px; 
+      background-color: #facc15; 
+      border-radius: 50%; 
+      transition: transform 0.3s; 
+    }
+    .toggle-checkbox:checked + .toggle-label { background-color: #f59e0b; }
+    .toggle-checkbox:checked + .toggle-label::after { transform: translateX(24px); }
+    p { font-size: 0.875rem; color: #d1d5db; }
+    .logo-footer {
+      position: fixed;
+      left: 20px;
+      bottom: 20px;
+      display: flex;
+      align-items: center;
+    }
+    .logo-footer img {
+      width: 60px;
+      height: 60px;
+    }
+    .grid-container { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+      gap: 20px; 
+      width: 100%; 
+      max-width: 900px; 
+      margin-bottom: 30px;
+    }
+
+    /* ===== JerryAI Logo Color Styles ===== */
+    .jerryAI { color: blue; }        /* Using color name */
+    .jerry { color: #0000FF; }       /* Hex code */
+    .jerry-rgb { color: rgb(0, 0, 255); }  /* RGB values */
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1 class="text-2xl font-bold">Smart Home Dashboard</h1>
+  <div class="connection-status" id="connectionStatus">Disconnected</div>
+</div>
+
+<!-- Mic Section Top -->
+<div class="mic-section">
+  <button id="micBtn" class="w-24 h-24 rounded-full bg-white border border-gray-200 shadow-lg flex items-center justify-center transition-all duration-300">
+    <svg class="w-8 h-8 text-yellow-500 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+    </svg>
+  </button>
+  <p id="micStatus" class="text-gray-300 font-medium mt-2">Tap mic to Activate</p>
+</div>
+
+<!-- Device Cards -->
+<div class="grid-container">
+  <!-- Bedroom Light -->
+  <div class="smart-card" onclick="toggleByCard('Bedroom Light', 'toggle-light')">
+    <div class="flex justify-between items-start">
+      <div id="icon-light" class="device-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+        </svg>
+      </div>
+      <div class="toggle-wrapper" onclick="event.stopPropagation()">
+        <input type="checkbox" id="toggle-light" class="toggle-checkbox">
+        <label for="toggle-light" class="toggle-label"></label>
+      </div>
+    </div>
+    <div>
+      <h3>Bedroom Light</h3>
+      <p id="status-light">Off</p>
+    </div>
+  </div>
+
+  <!-- Kitchen Light -->
+  <div class="smart-card" onclick="toggleByCard('Kitchen Light', 'toggle-kitchen')">
+    <div class="flex justify-between items-start">
+      <div id="icon-kitchen" class="device-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      </div>
+      <div class="toggle-wrapper" onclick="event.stopPropagation()">
+        <input type="checkbox" id="toggle-kitchen" class="toggle-checkbox">
+        <label for="toggle-kitchen" class="toggle-label"></label>
+      </div>
+    </div>
+    <div>
+      <h3>Kitchen Light</h3>
+      <p id="status-kitchen">Off</p>
+    </div>
+  </div>
+
+  <!-- Fan -->
+  <div class="smart-card" onclick="toggleByCard('Fan', 'toggle-fan')">
+    <div class="flex justify-between items-start">
+      <div id="icon-fan" class="device-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"/>
+        </svg>
+      </div>
+      <div class="toggle-wrapper" onclick="event.stopPropagation()">
+        <input type="checkbox" id="toggle-fan" class="toggle-checkbox">
+        <label for="toggle-fan" class="toggle-label"></label>
+      </div>
+    </div>
+    <div>
+      <h3>Living Room Fan</h3>
+      <p id="status-fan">Off</p>
+    </div>
+  </div>
+</div>
+
+<!-- Jerry AI Logo -->
+<div class="logo-footer">
+  <h1 class="text-2xl font-bold jerryAI">JerryAI</h1>
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>

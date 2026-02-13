@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Smart Home - Signup</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Arial,sans-serif;}
+    body{height:100vh;display:flex;overflow:hidden;}
+
+    .left-block{
+      flex:1;
+      background:linear-gradient(-45deg,#4e73df,#6f42c1,#4e73df,#6f42c1);
+      background-size:400% 400%;
+      animation:gradientMove 8s ease infinite;
+      display:flex;justify-content:center;align-items:center;color:white;
+      position:relative;overflow:hidden;
+    }
+    @keyframes gradientMove{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+    .left-block::before,.left-block::after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,0.15);animation:float 6s ease-in-out infinite;}
+    .left-block::before{width:220px;height:220px;top:-60px;left:-60px}
+    .left-block::after{width:300px;height:300px;bottom:-100px;right:-100px;animation-delay:3s}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(20px)}}
+    .bubbles{position:absolute;bottom:-120px;width:100%;display:flex;justify-content:space-around;}
+    .bubbles span{width:20px;height:20px;background:rgba(255,255,255,0.25);border-radius:50%;animation:rise 15s linear infinite;}
+    @keyframes rise{0%{transform:translateY(0);opacity:.6}100%{transform:translateY(-110vh);opacity:0}}
+    .left-content{text-align:center;z-index:2}
+    .right-block{flex:1;display:flex;justify-content:center;align-items:center;background:#f8f9fc;}
+    .box{width:360px;background:white;padding:45px;border-radius:14px;box-shadow:0 20px 40px rgba(0,0,0,0.1);transition:.4s;}
+    .box:hover{transform:scale(1.05)}
+    input{width:100%;padding:13px;margin-bottom:20px;border:none;border-bottom:2px solid #ccc;background:transparent;}
+    input:focus{outline:none;border-bottom:2px solid #4e73df}
+    button{width:100%;padding:13px;border:none;border-radius:8px;background:linear-gradient(135deg,#4e73df,#6f42c1);color:white;font-weight:bold;cursor:pointer;}
+    button:hover{transform:scale(1.05);}
+    .link{text-align:center;margin-top:15px}
+    .link a{color:#4e73df;text-decoration:none;font-weight:bold}
+  </style>
+</head>
+<body>
+<div class="left-block">
+  <div class="left-content">
+    <h1>Smart Home</h1>
+    <p>Create your account</p>
+  </div>
+  <div class="bubbles">
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+</div>
+<div class="right-block">
+  <div class="box">
+    <h2 style="text-align:center;margin-bottom:25px;">Create Account</h2>
+    <input type="text" id="username" placeholder="Username">
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="window.smartHomeApp.signupUser()">Sign Up</button>
+    <div class="link">
+      Already have an account? <a href="login.html">Login</a>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

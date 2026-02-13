@@ -30,6 +30,7 @@ app.add_middleware(
 def on_startup():
     create_db_and_tables()
 
+
 # API Endpoints
 @app.get("/devices/", response_model=List[Device])
 def get_devices(session: Session = Depends(get_session)):

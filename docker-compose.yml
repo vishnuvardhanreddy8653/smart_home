@@ -7,19 +7,18 @@ services:
       dockerfile: Dockerfile
     container_name: smart_home_backend
     ports:
-      - "8000:8000"
+      - "3000:3000"
     volumes:
       - ./database:/app/data
     environment:
-      - PYTHONUNBUFFERED=1
-      - OLLAMA_HOST=http://host.docker.internal:11434
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
     networks:
       - smart_home_network
     restart: always
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -40,6 +39,8 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    environment:
+      - BACKEND_URL=http://smart_home_backend:3000
     networks:
       - smart_home_network
     restart: always
@@ -48,6 +49,11 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+networks:
+  smart_home_network:
+    driver: bridge
+
 
 networks:
   smart_home_network:

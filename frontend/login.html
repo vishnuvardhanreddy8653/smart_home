@@ -46,37 +46,14 @@
     <h2 style="text-align:center;margin-bottom:25px;">Login</h2>
     <input type="email" placeholder="Email" id="email">
     <input type="password" placeholder="Password" id="password">
-    <button onclick="loginUser()">Login</button>
+    <button onclick="window.smartHomeApp.loginUser()">Login</button>
     <div class="signup-link">
       Don't have an account? <a href="signup.html">Sign Up</a>
     </div>
   </div>
 </div>
 
-<script>
-window.onload = function() {
-  // If already logged in, go to dashboard
-  if(localStorage.getItem("isLoggedIn") === "true") {
-    window.location.href = "dashboard.html";
-  }
-};
-
-function loginUser(){
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value.trim();
-    const storedEmail = localStorage.getItem("userEmail");
-    const storedPassword = localStorage.getItem("userPassword");
-
-    if(!email || !password){ alert("Please enter email and password!"); return; }
-
-    if(email === storedEmail && password === storedPassword){
-        localStorage.setItem("isLoggedIn", "true");
-        window.location.href = "dashboard.html";
-    } else {
-        alert("Invalid email or password! Please check your credentials.");
-    }
-}
-</script>
+<script src="app.js"></script>
 
 </body>
 </html>
